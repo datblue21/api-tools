@@ -113,6 +113,35 @@ def get_product_and_reviews(product_id: int, session: Session = Depends(get_sess
 
     return {"product": product, "reviews": reviews}
     #66. Khởi chạy ứng dụng
+
+    #7 Thống kê số lượng đánh giá (count) của sản phẩm theo category và polarity
+from sqlalchemy.sql import func
+from sqlmodel import select
+
+@app.get("/products/{product_id}/rate-stats", response_model=dict)
+def get_rate_stats_by_category(product_id: int, session: Session = Depends(get_session)):
+    """
+    Lấy số lượng đánh giá theo category và polarity của sản phẩm.
+    """
+    # Truy vấn nhóm theo category và polarity
+    statement = (
+        select(rate.category, rate.polarity, func.count())
+        .where(rate.product_id == product_id)
+        .group_by(rate.category, rate.polarity)
+    )
+    results = session.exec(statement).all()
+
+    # Chuyển kết quả thành dictionary dễ đọc
+    stats = {}
+    for category, polarity, count in results:
+        if category not in stats:
+            stats[category] = {}
+        stats[category][polarity] = count
+
+    return {
+        "product_id": product_id,
+        "rate_stats": stats
+    }
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
